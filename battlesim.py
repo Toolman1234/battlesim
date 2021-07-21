@@ -3,8 +3,6 @@
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 
-from enum import Enum
-
 
 class Ship:
     def __init__(self, dps, high_slot_hps, mid_slot_hps, ehp, role, timer):
@@ -14,6 +12,7 @@ class Ship:
         self.mid_slot_hps = mid_slot_hps
         self.timer = timer
         self.role = role
+        self.attacked = False
 
     def isAlive(self):
         if self.ehp <= 0:
@@ -58,6 +57,13 @@ class Fleet:
                     return True
         return False
 
+    def get_current_primary_role(self):
+        for ship in self.ships:
+            if ship.isAlive():
+                if ship.attacked:
+                    return ship.role
+        return None
+
     def get_total_dps(self):
         dps = 0
         for ship in self.ships:
@@ -67,17 +73,26 @@ class Fleet:
 
     def get_total_hps(self):
         hps = 0
-        healer_being_attacked = True
+        primary_is_marked = False
         for ship in self.ships:
             if ship.isAlive():
-                if self.hasTanker() and self.hasHealer():
+                if not primary_is_marked:
+                    primary_is_marked = True
+                    ship.attacked = True
+                # Tanker being attacked, mid slots * 1
+                if self.get_current_primary_role() == 'Tanker':
+                    hps += ship.mid_slot_hps
+                # Tanker not being attacked, and has Tanker, mid slots * 2
+                elif self.hasTanker():
                     hps += ship.mid_slot_hps * 2
+                # No Tanker atm, mid slots * 1
                 else:
                     hps += ship.mid_slot_hps
+
                 if ship.isHealer():
-                    if healer_being_attacked:
-                        healer_being_attacked = False
-                    else:
+                    # Healer get attacked, cant repair him self
+                    # TODO: Healer can repair Tanker when being attacked
+                    if not ship.attacked:
                         hps += ship.high_slot_hps
         return hps
 
